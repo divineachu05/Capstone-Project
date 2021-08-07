@@ -1,0 +1,64 @@
+============================Kubernetes on ubuntu:20.04
+------------------------->
+On Master&Slave node(s)
+    sudo su
+# install Docker
+https://docs.docker.com/engine/install/ubuntu/
+    service docker restart
+    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+    echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" >/etc/apt/sources.list.d/kubernetes.list
+    apt-get update
+    apt install kubeadm=1.20.0-00 kubectl=1.20.0-00 kubelet=1.20.0-00 -y
+On Master:
+
+    kubeadm init --pod-network-cidr=192.168.0.0/16
+    exit 
+    mkdir -p $HOME/.kube
+    sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    kubeadm token create --print-join-command
+On Node:
+    sudo su    
+    #Run join command
+On Master:
+    kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/baremetal/deploy.yaml
+    kubectl get svc --all-namespaces
+    sudo nano ingress.yaml
+===============================================================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minimal-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /apache
+        pathType: Prefix
+        backend:
+          service:
+            name: apache
+            port:
+              number: 80
+      - path: /custom
+        pathType: Prefix
+        backend:
+          service:
+            name: custom
+            port:
+              number: 80
+========================================================================================================
+FROM ubuntu
+RUN apt-get update
+RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
+RUN apt-get -y install apache2
+ADD . /var/www/html
+ENTRYPOINT apachectl -D FOREGROUND
+ENV name Intellipaat 
+========================================================================================================
+https://kubernetes.io/docs/concepts/services-networking/ingress/
+https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
